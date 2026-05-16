@@ -3,29 +3,25 @@ import { Loader2 } from 'lucide-react';
 import { getVideoData } from '../services/api';
 
 const DownloadPanel = ({ video }) => {
-  const [formats,  setFormats]  = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState('');
+  const [formats, setFormats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState('');
 
   useEffect(() => {
-    if (!video?.videoId) return;
+    if (!video?.url) return;
     setLoading(true);
     setError('');
     setFormats([]);
 
-    const videoUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
-    getVideoData(videoUrl)
+    getVideoData(video.url)
       .then(data => setFormats(data.formats || []))
       .catch(() => setError('Could not load formats'))
       .finally(() => setLoading(false));
-  }, [video?.videoId]);
-
-  const handleDownload = (url) => window.open(url, '_blank');
+  }, [video?.url]);
 
   return (
     <div className="mt-3 sm:mt-4 rounded-xl border border-gray-200 dark:border-gray-700
                     bg-white dark:bg-gray-900 p-3 sm:p-4">
-      {/* Header */}
       <div className="flex items-center gap-2 mb-3">
         <svg className="w-4 h-4 text-red-600 shrink-0" fill="currentColor" viewBox="0 0 20 20">
           <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -42,10 +38,10 @@ const DownloadPanel = ({ video }) => {
         <p className="text-xs text-red-500">{error}</p>
       ) : (
         <div className="flex flex-wrap gap-2">
-          {formats.map(({ quality, url, type }) => (
+          {formats.map(({ quality, url }) => (
             <button
               key={quality}
-              onClick={() => handleDownload(url)}
+              onClick={() => window.open(url, '_blank')}
               className="flex flex-col items-center justify-center px-3 sm:px-4 py-2 rounded-lg
                          border-2 border-red-600 text-red-600
                          hover:bg-red-600 hover:text-white active:bg-red-700
@@ -53,7 +49,7 @@ const DownloadPanel = ({ video }) => {
             >
               <span>Download {quality}</span>
               <span className="font-normal opacity-75 text-[10px]">
-                {type === 'mp3' ? 'Audio' : 'MP4'}
+                {quality === 'mp3' ? 'Audio' : 'MP4'}
               </span>
             </button>
           ))}

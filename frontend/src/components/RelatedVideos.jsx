@@ -6,9 +6,7 @@ const RelatedVideos = ({ videos }) => (
     {videos.length === 0 && (
       <p className="text-xs text-gray-400 dark:text-gray-500">No related videos found.</p>
     )}
-    {videos.map(v => (
-      <VideoCard key={v.videoId} video={v} compact />
-    ))}
+    {videos.map(v => <VideoCard key={v.url} video={v} compact />)}
   </div>
 );
 

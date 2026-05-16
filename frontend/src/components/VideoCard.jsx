@@ -17,7 +17,6 @@ const VideoCard = ({ video, compact = false }) => {
           <p className="text-xs font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug">
             {video.title}
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">{video.channel}</p>
         </div>
       </button>
     );
@@ -37,7 +36,6 @@ const VideoCard = ({ video, compact = false }) => {
         <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-2 leading-snug">
           {video.title}
         </p>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{video.channel}</p>
       </div>
     </button>
   );

@@ -1,45 +1,15 @@
-import axios from "axios";
+import axios from 'axios';
 
-const BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ||
-  "https://ytdlp-worker-production.up.railway.app";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
-const client = axios.create({
-  baseURL: BASE_URL,
-});
+const client = axios.create({ baseURL: BASE_URL });
 
+// GET /search?q=QUERY → [{ title, thumbnail, url }]
+export const searchVideos = (q) =>
+  client.get('/search', { params: { q } }).then(r => r.data);
 
-// SEARCH VIDEOS
-export const searchVideos = async (q) => {
-  const res = await client.get("/search", {
-    params: { q },
-  });
-
-  return res.data.results;
-};
-
-
-// GET VIDEO (DOWNLOAD + FORMATS)
-export const getVideoData = async (videoUrl) => {
-  const res = await client.get("/api/video", {
-    params: { url: videoUrl },
-  });
-
-  return res.data;
-};
-
-
-// OPTIONAL (REMOVE OR KEEP LATER)
-export const sendContactMessage = async (name, email, message) => {
-  const res = await fetch(`${BASE_URL}/api/contact`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ name, email, message }),
-  });
-
-  return res.json();
-};
+// GET /api/video?url=VIDEO_URL → { title, thumbnail, formats }
+export const getVideoData = (url) =>
+  client.get('/api/video', { params: { url } }).then(r => r.data);
 
 export default client;

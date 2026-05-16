@@ -4,20 +4,19 @@ import { searchVideos as apiSearch } from '../services/api';
 const VideoContext = createContext();
 
 export const VideoProvider = ({ children }) => {
-  const [view,         setView]        = useState('home');
-  const [videos,       setVideos]      = useState([]);
-  const [currentVideo, setCurrent]     = useState(null);
-  const [related,      setRelated]     = useState([]);
-  const [loading,      setLoading]     = useState(false);
-  const [searchError,  setSearchError] = useState('');
-
+  const [view,        setView]       = useState('home');
+  const [videos,      setVideos]     = useState([]);
+  const [currentVideo, setCurrent]   = useState(null);
+  const [related,     setRelated]    = useState([]);
+  const [loading,     setLoading]    = useState(false);
+  const [searchError, setSearchError] = useState('');
 
   const search = useCallback(async (q) => {
     setLoading(true);
     setSearchError('');
     try {
       const results = await apiSearch(q);
-      setVideos(results);
+      setVideos(Array.isArray(results) ? results : []);
       setView('home');
       setCurrent(null);
     } catch (e) {
@@ -30,11 +29,8 @@ export const VideoProvider = ({ children }) => {
   const loadDefault = useCallback(async () => {
     setLoading(true);
     try {
-      const year = new Date().getFullYear();
-      const results = await apiSearch(`trending music ${year}`);
-      setVideos(results);
-      setView('home');
-      setCurrent(null);
+      const results = await apiSearch('trending music 2025');
+      setVideos(Array.isArray(results) ? results : []);
     } catch (_) {}
     finally { setLoading(false); }
   }, []);
@@ -45,7 +41,7 @@ export const VideoProvider = ({ children }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     try {
       const results = await apiSearch(video.title.split(' ').slice(0, 3).join(' '));
-      setRelated(results.filter(v => v.videoId !== video.videoId));
+      setRelated((Array.isArray(results) ? results : []).filter(v => v.url !== video.url));
     } catch (_) { setRelated([]); }
   }, []);
 
