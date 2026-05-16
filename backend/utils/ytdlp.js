@@ -6,7 +6,7 @@ const http  = require('http');
 
 const YTDLP    = 'yt-dlp';
 const FFMPEG   = 'ffmpeg';
-const TEMP_DIR = path.resolve(process.env.TEMP_DIR || './temp');
+const TEMP_DIR = path.resolve(process.env.TEMP_DIR || '/tmp/gotube');
 
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 

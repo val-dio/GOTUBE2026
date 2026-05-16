@@ -27,8 +27,8 @@ RUN npm install --omit=dev
 # Copy all backend source files
 COPY . .
 
-# Create temp directory
-RUN mkdir -p /app/temp
+# Create temp directory with open permissions
+RUN mkdir -p /tmp/gotube && chmod 777 /tmp/gotube
 
 # Expose port
 EXPOSE 5000

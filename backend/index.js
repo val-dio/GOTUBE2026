@@ -14,7 +14,7 @@ const { apiKeyAuth }  = require('./middleware/auth');
 
 const app      = express();
 const PORT     = process.env.PORT || 5000;
-const TEMP_DIR = process.env.TEMP_DIR || './temp';
+const TEMP_DIR = process.env.TEMP_DIR || '/tmp/gotube';
 
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
