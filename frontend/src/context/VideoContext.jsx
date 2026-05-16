@@ -4,12 +4,11 @@ import { searchVideos as apiSearch } from '../services/api';
 const VideoContext = createContext();
 
 export const VideoProvider = ({ children }) => {
-  const [view,        setView]       = useState('home');
-  const [videos,      setVideos]     = useState([]);
-  const [currentVideo, setCurrent]   = useState(null);
-  const [related,     setRelated]    = useState([]);
-  const [loading,     setLoading]    = useState(false);
-  const [searchError, setSearchError] = useState('');
+  const [view,         setView]       = useState('home');
+  const [videos,       setVideos]     = useState([]);
+  const [currentVideo, setCurrent]    = useState(null);
+  const [loading,      setLoading]    = useState(false);
+  const [searchError,  setSearchError] = useState('');
 
   const search = useCallback(async (q) => {
     setLoading(true);
@@ -35,19 +34,15 @@ export const VideoProvider = ({ children }) => {
     finally { setLoading(false); }
   }, []);
 
-  const openVideo = useCallback(async (video) => {
+  const openVideo = useCallback((video) => {
     setCurrent(video);
     setView('player');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    try {
-      const results = await apiSearch(video.title.split(' ').slice(0, 3).join(' '));
-      setRelated((Array.isArray(results) ? results : []).filter(v => v.id !== video.id));
-    } catch (_) { setRelated([]); }
   }, []);
 
   return (
     <VideoContext.Provider value={{
-      view, videos, currentVideo, related,
+      view, videos, currentVideo,
       loading, searchError,
       search, loadDefault, openVideo,
     }}>

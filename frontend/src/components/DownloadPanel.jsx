@@ -22,7 +22,7 @@ const DownloadPanel = ({ video }) => {
       .then(data => setFormats(data.formats || []))
       .catch(() => setError('Could not load formats'))
       .finally(() => setLoading(false));
-  }, [video?.url]);
+  }, [video?.id]);
 
   return (
     <div className="mt-3 sm:mt-4 rounded-xl border border-gray-200 dark:border-gray-700
