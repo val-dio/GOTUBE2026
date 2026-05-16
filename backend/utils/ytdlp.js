@@ -23,6 +23,7 @@ exec(`"${FFMPEG}" -version`, (err, stdout) =>
   console.log('[debug] ffmpeg version:', err ? `NOT FOUND — ${err.message}` : stdout.split('\n')[0].trim())
 );
 
+
 // ── Browser-like headers injected into every yt-dlp call ─────────────────────
 const BROWSER_HEADERS = [
   '--user-agent',
@@ -36,6 +37,17 @@ const EXTRACTOR_ARGS = [
   '--extractor-args', 'youtube:player_client=android,web',
 ];
 
+// Cookies file path — required on server IPs to bypass YouTube bot detection
+const COOKIES_PATH = process.env.COOKIES_PATH
+  ? path.resolve(process.env.COOKIES_PATH)
+  : path.resolve(__dirname, '../cookies.txt');
+
+const cookiesFlag = () => {
+  const exists = fs.existsSync(COOKIES_PATH);
+  console.log('[debug] cookies.txt:', exists ? `FOUND at ${COOKIES_PATH}` : `NOT FOUND at ${COOKIES_PATH}`);
+  return exists ? ['--cookies', COOKIES_PATH] : [];
+};
+
 // Common flags for all yt-dlp calls
 const COMMON_FLAGS = [
   '--no-playlist',
@@ -45,6 +57,9 @@ const COMMON_FLAGS = [
   ...BROWSER_HEADERS,
   ...EXTRACTOR_ARGS,
 ];
+
+// Returns COMMON_FLAGS + cookies if cookies.txt exists
+const flags = () => [...COMMON_FLAGS, ...cookiesFlag()];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -142,7 +157,7 @@ const parseStage = (line) => {
 // ── Video meta ────────────────────────────────────────────────────────────────
 const getVideoMeta = (url) =>
   withRetry(() => new Promise((resolve, reject) => {
-    const args = [url, '--print', 'title', '--print', 'thumbnail', ...COMMON_FLAGS];
+    const args = [url, '--print', 'title', '--print', 'thumbnail', ...flags()];
     console.log('[debug] getVideoMeta:', url);
     const proc = spawn(YTDLP, args, { shell: false });
     let out = '', err = '';
@@ -166,7 +181,7 @@ const HEIGHT_LABELS = {
 
 const getAvailableFormats = (url) =>
   withRetry(() => new Promise((resolve, reject) => {
-    const args = [url, '-F', ...COMMON_FLAGS];
+    const args = [url, '-F', ...flags()];
     console.log('[debug] getAvailableFormats args:', args.join(' '));
     const proc = spawn(YTDLP, args, { shell: false });
     let out = '', err = '';
@@ -247,7 +262,7 @@ const downloadMedia = async (url, formatId, onProgress) => {
       '--embed-thumbnail',
       '--add-metadata',
       '--newline',
-      ...COMMON_FLAGS,
+      ...flags(),
     ];
 
     if (isAudio) {
@@ -299,7 +314,7 @@ const searchYtDlp = (query, maxResults = 16) =>
       `ytsearch${maxResults}:${query}`,
       '--flat-playlist',
       '--dump-single-json',
-      ...COMMON_FLAGS,
+      ...flags(),
     ];
     const proc = spawn(YTDLP, args, { shell: false });
     let out = '', err = '';
