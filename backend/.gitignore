@@ -2,4 +2,6 @@ node_modules/
 downloads/
 temp/
 .env
-
+cookies.txt
+yt-dlp
+bin/
