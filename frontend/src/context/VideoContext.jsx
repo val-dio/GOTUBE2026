@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback } from 'react';
-import { searchVideos as apiSearch, downloadFile } from '../services/api';
+import { searchVideos as apiSearch } from '../services/api';
 
 const VideoContext = createContext();
 
@@ -10,16 +10,7 @@ export const VideoProvider = ({ children }) => {
   const [related,      setRelated]     = useState([]);
   const [loading,      setLoading]     = useState(false);
   const [searchError,  setSearchError] = useState('');
-  const [downloads,    setDownloads]   = useState({});
-  // downloads: { [jobId]: { format, progress, status, speed, error } }
 
-  const updateJob = useCallback((jobId, patch) =>
-    setDownloads(prev => ({ ...prev, [jobId]: { ...prev[jobId], ...patch } }))
-  , []);
-
-  const dismissJob = useCallback((jobId) =>
-    setDownloads(prev => { const n = { ...prev }; delete n[jobId]; return n; })
-  , []);
 
   const search = useCallback(async (q) => {
     setLoading(true);
@@ -58,37 +49,11 @@ export const VideoProvider = ({ children }) => {
     } catch (_) { setRelated([]); }
   }, []);
 
-  const download = useCallback(async (video, formatId, quality) => {
-    const jobId    = `${video.videoId}-${formatId}-${Date.now()}`;
-    const videoUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
-
-    updateJob(jobId, {
-      format:    quality || formatId,   // human-readable label e.g. "1080p" or "MP3"
-      formatId,                         // technical selector — used for the API call only
-      title:     video.title,
-      thumbnail: video.thumbnail,
-      url:       videoUrl,
-      percent:   0,
-      status:    'Preparing...',
-      speed:     '',
-      eta:       '',
-    });
-
-    try {
-      await downloadFile(videoUrl, formatId, (patch) => {
-        updateJob(jobId, patch);
-      });
-      updateJob(jobId, { percent: 100, status: 'Completed', speed: '', eta: '' });
-    } catch (e) {
-      updateJob(jobId, { status: 'error', error: e.message || 'Download failed' });
-    }
-  }, [updateJob]);
-
   return (
     <VideoContext.Provider value={{
       view, videos, currentVideo, related,
-      loading, searchError, downloads,
-      search, loadDefault, openVideo, download, dismissJob,
+      loading, searchError,
+      search, loadDefault, openVideo,
     }}>
       {children}
     </VideoContext.Provider>

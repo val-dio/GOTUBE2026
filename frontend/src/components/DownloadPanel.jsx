@@ -1,32 +1,26 @@
 import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useVideo } from '../context/VideoContext';
-import { getFormats } from '../services/api';
-import DownloadProgress from './DownloadProgress';
+import { getVideoData } from '../services/api';
 
 const DownloadPanel = ({ video }) => {
-  const { download, downloads } = useVideo();
   const [formats,  setFormats]  = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState('');
 
-  // Fetch real available formats when video changes
   useEffect(() => {
     if (!video?.videoId) return;
     setLoading(true);
     setError('');
     setFormats([]);
 
-    getFormats(video.videoId)
+    const videoUrl = `https://www.youtube.com/watch?v=${video.videoId}`;
+    getVideoData(videoUrl)
       .then(data => setFormats(data.formats || []))
       .catch(() => setError('Could not load formats'))
       .finally(() => setLoading(false));
   }, [video?.videoId]);
 
-  const activeJobs = Object.values(downloads).filter(j =>
-    j.url === `https://www.youtube.com/watch?v=${video.videoId}`
-  );
-  const busy = activeJobs.some(j => j.status !== 'Completed' && j.status !== 'error');
+  const handleDownload = (url) => window.open(url, '_blank');
 
   return (
     <div className="mt-3 sm:mt-4 rounded-xl border border-gray-200 dark:border-gray-700
@@ -39,7 +33,6 @@ const DownloadPanel = ({ video }) => {
         <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Download</span>
       </div>
 
-      {/* Format buttons */}
       {loading ? (
         <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 py-2">
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -49,27 +42,23 @@ const DownloadPanel = ({ video }) => {
         <p className="text-xs text-red-500">{error}</p>
       ) : (
         <div className="flex flex-wrap gap-2">
-          {formats.map(({ quality, formatId }) => (
+          {formats.map(({ quality, url, type }) => (
             <button
               key={quality}
-              onClick={() => download(video, formatId, quality)}
-              disabled={busy}
+              onClick={() => handleDownload(url)}
               className="flex flex-col items-center justify-center px-3 sm:px-4 py-2 rounded-lg
                          border-2 border-red-600 text-red-600
                          hover:bg-red-600 hover:text-white active:bg-red-700
-                         disabled:opacity-50 disabled:cursor-not-allowed
                          transition-colors text-xs font-bold min-h-[44px]"
             >
-              <span>{quality}</span>
+              <span>Download {quality}</span>
               <span className="font-normal opacity-75 text-[10px]">
-                {quality === 'MP3' ? 'Audio' : 'MP4'}
+                {type === 'mp3' ? 'Audio' : 'MP4'}
               </span>
             </button>
           ))}
         </div>
       )}
-
-      <DownloadProgress />
     </div>
   );
 };
