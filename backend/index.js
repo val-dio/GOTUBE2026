@@ -20,10 +20,12 @@ const TEMP_DIR     = process.env.TEMP_DIR || './temp';
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
 // CORS — only allow configured frontend origin
-const cors = require("cors");
 
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGIN,
+  origin: [
+    "http://localhost:5173",
+    "https://gotube-omega.vercel.app"
+  ],
   methods: ["GET", "POST"],
   credentials: true
 }));
@@ -51,8 +53,21 @@ app.use('/video-info', videoInfoRoutes);
 app.use('/download',   downloadRoutes);
 app.use('/formats',    formatsRoutes);
 
-// Health check (no auth needed — add before apiKeyAuth if desired)
+// Health check
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
+
+// Debug endpoint — check yt-dlp + ffmpeg installation
+app.get('/debug', (req, res) => {
+  const { exec } = require('child_process');
+  const results = {};
+  let pending = 4;
+  const done = () => { if (--pending === 0) res.json(results); };
+
+  exec('which yt-dlp',    (e, o) => { results.ytdlp_path    = e ? 'NOT FOUND' : o.trim(); done(); });
+  exec('which ffmpeg',    (e, o) => { results.ffmpeg_path   = e ? 'NOT FOUND' : o.trim(); done(); });
+  exec('yt-dlp --version',(e, o) => { results.ytdlp_version = e ? 'ERROR'     : o.trim(); done(); });
+  exec('ffmpeg -version', (e, o) => { results.ffmpeg_version= e ? 'ERROR'     : o.split('\n')[0]; done(); });
+});
 
 // Global error handler
 app.use((err, req, res, next) => {

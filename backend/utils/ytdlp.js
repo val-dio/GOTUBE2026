@@ -1,4 +1,4 @@
-const { execSync, spawn } = require('child_process');
+const { execSync, spawn, exec } = require('child_process');
 const path  = require('path');
 const fs    = require('fs');
 const https = require('https');
@@ -9,6 +9,20 @@ const FFMPEG   = process.env.FFMPEG_PATH || 'ffmpeg';
 const TEMP_DIR = path.resolve(process.env.TEMP_DIR || './temp');
 
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
+
+// ── Startup debug: confirm yt-dlp + ffmpeg are reachable ─────────────────────
+exec('which yt-dlp', (err, stdout) =>
+  console.log('[debug] yt-dlp path:', err ? `NOT FOUND (${err.message})` : stdout.trim())
+);
+exec('which ffmpeg', (err, stdout) =>
+  console.log('[debug] ffmpeg path:', err ? `NOT FOUND (${err.message})` : stdout.trim())
+);
+exec('yt-dlp --version', (err, stdout) =>
+  console.log('[debug] yt-dlp version:', err ? `ERROR (${err.message})` : stdout.trim())
+);
+exec('ffmpeg -version', (err, stdout) =>
+  console.log('[debug] ffmpeg version:', err ? `ERROR (${err.message})` : stdout.split('\n')[0].trim())
+);
 
 // ── Browser-like headers injected into every yt-dlp call ─────────────────────
 const BROWSER_HEADERS = [
@@ -37,14 +51,17 @@ const COMMON_FLAGS = [
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-/** Works on both Windows (where) and Linux/Render (which) */
+/** Resolve ffmpeg directory — uses 'which' (Linux/Render) */
 const getFfmpegDir = () => {
-  const cmd = process.platform === 'win32' ? 'where ffmpeg' : 'which ffmpeg';
   try {
     if (FFMPEG !== 'ffmpeg') return path.dirname(FFMPEG);
-    const bin = execSync(cmd, { encoding: 'utf8' }).split('\n')[0].trim();
+    const bin = execSync('which ffmpeg', { encoding: 'utf8' }).split('\n')[0].trim();
+    console.log('[debug] getFfmpegDir resolved:', bin);
     return path.dirname(bin);
-  } catch { return '/usr/bin'; }
+  } catch (e) {
+    console.warn('[debug] getFfmpegDir fallback /usr/bin:', e.message);
+    return '/usr/bin';
+  }
 };
 
 const sanitizeFilename = (name) =>
@@ -122,12 +139,14 @@ const parseStage = (line) => {
 const getVideoMeta = (url) =>
   withRetry(() => new Promise((resolve, reject) => {
     const args = [url, '--print', 'title', '--print', 'thumbnail', ...COMMON_FLAGS];
+    console.log('[debug] getVideoMeta:', url);
     const proc = spawn(YTDLP, args, { shell: false });
     let out = '', err = '';
     proc.stdout.on('data', d => { out += d.toString(); });
     proc.stderr.on('data', d => { err += d.toString(); });
     proc.on('close', () => {
       const lines = out.trim().split('\n').map(l => l.trim()).filter(Boolean);
+      console.log('[debug] getVideoMeta result:', lines[0] || 'EMPTY', '| err:', err.slice(0, 100));
       if (lines[0]) return resolve({ title: lines[0], thumbnail: lines[1] || '' });
       reject(new Error(err || 'Could not fetch video metadata'));
     });
@@ -144,23 +163,37 @@ const HEIGHT_LABELS = {
 const getAvailableFormats = (url) =>
   withRetry(() => new Promise((resolve, reject) => {
     const args = [url, '-F', ...COMMON_FLAGS];
+    console.log('[debug] getAvailableFormats args:', args.join(' '));
     const proc = spawn(YTDLP, args, { shell: false });
     let out = '', err = '';
     proc.stdout.on('data', d => { out += d.toString(); });
     proc.stderr.on('data', d => { err += d.toString(); });
     proc.on('close', code => {
+      console.log('[debug] yt-dlp -F exit code:', code);
+      console.log('[debug] yt-dlp -F stdout:\n', out);
+      if (err) console.log('[debug] yt-dlp -F stderr:\n', err);
+
       if (code !== 0 && !out) return reject(new Error(err || 'yt-dlp -F failed'));
 
       const heights = new Set();
       for (const line of out.split('\n')) {
-        const m = line.match(/\s(\d{3,4})x(\d{3,4})\s/);
-        if (m) {
-          const h        = parseInt(m[2], 10);
+        // Pattern 1: "137  mp4  1920x1080  1080p"
+        const m1 = line.match(/\s(\d{2,4})x(\d{2,4})\s/);
+        // Pattern 2: "1080p" label directly in the line
+        const m2 = line.match(/\b(\d{3,4})p\b/);
+
+        let h = 0;
+        if (m1) h = parseInt(m1[2], 10);
+        else if (m2) h = parseInt(m2[1], 10);
+
+        if (h > 0) {
           const standard = Object.keys(HEIGHT_LABELS).map(Number)
-            .find(s => Math.abs(s - h) <= 20);
+            .find(s => Math.abs(s - h) <= 30);
           if (standard) heights.add(standard);
         }
       }
+
+      console.log('[debug] detected heights:', [...heights]);
 
       const formats = [...heights].sort((a, b) => a - b).map(h => ({
         quality:  HEIGHT_LABELS[h],
@@ -170,9 +203,10 @@ const getAvailableFormats = (url) =>
       }));
 
       formats.push({ quality: 'MP3', height: 0, formatId: 'mp3', ext: 'mp3' });
+      console.log('[debug] final formats:', formats.map(f => f.quality).join(', '));
       resolve(formats);
     });
-    proc.on('error', reject);
+    proc.on('error', (e) => { console.error('[debug] spawn error:', e.message); reject(e); });
     setTimeout(() => { proc.kill(); reject(new Error('getAvailableFormats timeout')); }, 35000);
   }));
 
