@@ -4,7 +4,11 @@ const fs    = require('fs');
 const https = require('https');
 const http  = require('http');
 
-const YTDLP    = 'yt-dlp';
+const YTDLP    = process.env.YTDLP_PATH || (() => {
+  // Check for local binary downloaded during build
+  const local = path.resolve(__dirname, '../yt-dlp');
+  return fs.existsSync(local) ? local : 'yt-dlp';
+})();
 const FFMPEG   = 'ffmpeg';
 const TEMP_DIR = path.resolve(process.env.TEMP_DIR || '/tmp/gotube');
 
