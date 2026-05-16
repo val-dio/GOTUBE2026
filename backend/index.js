@@ -10,6 +10,7 @@ const videoInfoRoutes = require('./routes/videoInfo');
 const downloadRoutes  = require('./routes/download');
 const formatsRoutes   = require('./routes/formats');
 const contactRoutes   = require('./routes/contact');
+const videoRoutes     = require('./routes/video');
 const { apiKeyAuth }  = require('./middleware/auth');
 
 const app      = express();
@@ -64,6 +65,7 @@ app.use('/search',     searchRoutes);
 app.use('/video-info', videoInfoRoutes);
 app.use('/download',   downloadRoutes);
 app.use('/formats',    formatsRoutes);
+app.use('/api/video',  videoRoutes);
 
 // ── Global error handler ──────────────────────────────────────────────────────
 app.use((err, _req, res, _next) => {
