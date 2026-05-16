@@ -8,29 +8,52 @@ const YTDLP    = process.env.YTDLP_PATH  || 'yt-dlp';
 const FFMPEG   = process.env.FFMPEG_PATH || 'ffmpeg';
 const TEMP_DIR = path.resolve(process.env.TEMP_DIR || './temp');
 
-// Ensure temp dir exists
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
+
+// ── Browser-like headers injected into every yt-dlp call ─────────────────────
+const BROWSER_HEADERS = [
+  '--user-agent',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
+  '--add-header', 'Accept-Language:en-US,en;q=0.9',
+  '--add-header', 'Referer:https://www.youtube.com/',
+];
+
+// Use Android player client — avoids JS runtime requirement and reduces 429s
+const EXTRACTOR_ARGS = [
+  '--extractor-args', 'youtube:player_client=android,web',
+];
+
+// Common flags for all yt-dlp calls
+const COMMON_FLAGS = [
+  '--no-playlist',
+  '--no-warnings',
+  '--force-ipv4',
+  '--no-check-certificates',
+  ...BROWSER_HEADERS,
+  ...EXTRACTOR_ARGS,
+];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+/** Works on both Windows (where) and Linux/Render (which) */
 const getFfmpegDir = () => {
+  const cmd = process.platform === 'win32' ? 'where ffmpeg' : 'which ffmpeg';
   try {
-    const bin = FFMPEG === 'ffmpeg'
-      ? execSync('where ffmpeg', { encoding: 'utf8' }).split('\n')[0].trim()
-      : FFMPEG;
+    if (FFMPEG !== 'ffmpeg') return path.dirname(FFMPEG);
+    const bin = execSync(cmd, { encoding: 'utf8' }).split('\n')[0].trim();
     return path.dirname(bin);
-  } catch { return '.'; }
+  } catch { return '/usr/bin'; }
 };
 
 const sanitizeFilename = (name) =>
   name.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim().slice(0, 180);
 
-/** Safely delete a file, silently ignore errors */
 const safeDelete = (filePath) => {
   try { if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (_) {}
 };
 
-/** Download URL to dest path */
 const fetchFile = (url, dest) =>
   new Promise((resolve, reject) => {
     const proto = url.startsWith('https') ? https : http;
@@ -41,11 +64,46 @@ const fetchFile = (url, dest) =>
     }).on('error', (err) => { safeDelete(dest); reject(err); });
   });
 
-// ── Progress line parser ──────────────────────────────────────────────────────
-// Parses: [download]  25.4% of   50.00MiB at    2.00MiB/s ETA 00:10
+// ── Retry wrapper with exponential backoff ────────────────────────────────────
+/**
+ * Runs fn(), retries up to maxRetries times on failure.
+ * Waits 2^attempt * 1000ms between retries (1s, 2s, 4s).
+ */
+const withRetry = async (fn, maxRetries = 3) => {
+  let lastErr;
+  for (let i = 0; i <= maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const is429 = err.message?.includes('429') || err.message?.includes('Too Many');
+      if (i < maxRetries) {
+        const delay = Math.pow(2, i) * 1500; // 1.5s, 3s, 6s
+        console.warn(`[yt-dlp] attempt ${i + 1} failed${is429 ? ' (429)' : ''}, retrying in ${delay}ms...`);
+        await sleep(delay);
+      }
+    }
+  }
+  throw lastErr;
+};
+
+// ── Spawn helper ──────────────────────────────────────────────────────────────
+/** Spawn yt-dlp, collect stdout/stderr, resolve on close */
+const spawnYtDlp = (args) =>
+  new Promise((resolve, reject) => {
+    const proc = spawn(YTDLP, args, { shell: false });
+    let out = '', err = '';
+    proc.stdout.on('data', d => { out += d.toString(); });
+    proc.stderr.on('data', d => { err += d.toString(); });
+    proc.on('close', code => {
+      if (code !== 0 && !out.trim()) return reject(new Error(err || `yt-dlp exited ${code}`));
+      resolve({ out, err, code });
+    });
+    proc.on('error', reject);
+  });
+
+// ── Progress parsers ──────────────────────────────────────────────────────────
 const PROGRESS_RE = /\[download\]\s+([\d.]+)%\s+of\s+[\d.]+\S+\s+at\s+([\d.]+\S+)\s+ETA\s+(\S+)/;
-const MERGE_RE    = /\[Merger\]|Merging formats|Destination:/i;
-const FFMPEG_RE   = /\[ffmpeg\]/i;
 
 const parseProgress = (line) => {
   const m = line.match(PROGRESS_RE);
@@ -54,23 +112,17 @@ const parseProgress = (line) => {
 };
 
 const parseStage = (line) => {
-  if (/\[download\].*Destination/i.test(line)) return 'Downloading';
-  if (/\[download\].*audio/i.test(line))        return 'Downloading';
-  if (MERGE_RE.test(line))                       return 'Processing';
-  if (FFMPEG_RE.test(line))                      return 'Processing';
-  if (/\[ExtractAudio\]/i.test(line))            return 'Processing';
+  if (/\[download\].*Destination/i.test(line))          return 'Downloading';
+  if (/\[Merger\]|Merging formats/i.test(line))         return 'Processing';
+  if (/\[ffmpeg\]|\[ExtractAudio\]/i.test(line))        return 'Processing';
   return null;
 };
 
 // ── Video meta ────────────────────────────────────────────────────────────────
-
 const getVideoMeta = (url) =>
-  new Promise((resolve, reject) => {
-    const proc = spawn(
-      YTDLP,
-      [url, '--print', 'title', '--print', 'thumbnail', '--no-playlist', '--no-warnings'],
-      { shell: false }
-    );
+  withRetry(() => new Promise((resolve, reject) => {
+    const args = [url, '--print', 'title', '--print', 'thumbnail', ...COMMON_FLAGS];
+    const proc = spawn(YTDLP, args, { shell: false });
     let out = '', err = '';
     proc.stdout.on('data', d => { out += d.toString(); });
     proc.stderr.on('data', d => { err += d.toString(); });
@@ -80,21 +132,19 @@ const getVideoMeta = (url) =>
       reject(new Error(err || 'Could not fetch video metadata'));
     });
     proc.on('error', reject);
-    setTimeout(() => { proc.kill(); reject(new Error('getVideoMeta timeout')); }, 25000);
-  });
+    setTimeout(() => { proc.kill(); reject(new Error('getVideoMeta timeout')); }, 30000);
+  }));
 
 // ── Dynamic format detection ──────────────────────────────────────────────────
+const HEIGHT_LABELS = {
+  144: '144p', 240: '240p', 360: '360p', 480: '480p',
+  720: '720p', 1080: '1080p', 1440: '1440p', 2160: '4K', 4320: '8K',
+};
 
-const HEIGHT_LABELS = { 144: '144p', 240: '240p', 360: '360p', 480: '480p',
-                        720: '720p', 1080: '1080p', 1440: '1440p', 2160: '4K', 4320: '8K' };
-
-/**
- * Returns array of available quality labels for a video URL.
- * Always includes 'mp3'. Only includes video qualities that actually exist.
- */
 const getAvailableFormats = (url) =>
-  new Promise((resolve, reject) => {
-    const proc = spawn(YTDLP, [url, '-F', '--no-playlist', '--no-warnings'], { shell: false });
+  withRetry(() => new Promise((resolve, reject) => {
+    const args = [url, '-F', ...COMMON_FLAGS];
+    const proc = spawn(YTDLP, args, { shell: false });
     let out = '', err = '';
     proc.stdout.on('data', d => { out += d.toString(); });
     proc.stderr.on('data', d => { err += d.toString(); });
@@ -103,33 +153,28 @@ const getAvailableFormats = (url) =>
 
       const heights = new Set();
       for (const line of out.split('\n')) {
-        // Match lines like: 137  mp4  1920x1080  1080p ...
         const m = line.match(/\s(\d{3,4})x(\d{3,4})\s/);
         if (m) {
-          const h = parseInt(m[2], 10);
-          // Round to nearest standard height
+          const h        = parseInt(m[2], 10);
           const standard = Object.keys(HEIGHT_LABELS).map(Number)
             .find(s => Math.abs(s - h) <= 20);
           if (standard) heights.add(standard);
         }
       }
 
-      const sorted  = [...heights].sort((a, b) => a - b);
-      const formats = sorted.map(h => ({
+      const formats = [...heights].sort((a, b) => a - b).map(h => ({
         quality:  HEIGHT_LABELS[h],
         height:   h,
         formatId: buildFormatSelector(h),
         ext:      'mp4',
       }));
 
-      // Always add MP3
       formats.push({ quality: 'MP3', height: 0, formatId: 'mp3', ext: 'mp3' });
-
       resolve(formats);
     });
     proc.on('error', reject);
-    setTimeout(() => { proc.kill(); reject(new Error('getAvailableFormats timeout')); }, 30000);
-  });
+    setTimeout(() => { proc.kill(); reject(new Error('getAvailableFormats timeout')); }, 35000);
+  }));
 
 const buildFormatSelector = (height) => {
   if (height >= 4320) return 'bestvideo[height<=4320][ext=mp4]+bestaudio[ext=m4a]/best[height<=4320]';
@@ -138,18 +183,12 @@ const buildFormatSelector = (height) => {
 };
 
 // ── Download with real progress ───────────────────────────────────────────────
-
-/**
- * Download to TEMP_DIR, call onProgress(patch) with real yt-dlp updates.
- * Returns temp file path — caller MUST delete it after use.
- */
 const downloadMedia = async (url, formatId, onProgress) => {
   const ffmpegDir = getFfmpegDir();
   const isAudio   = formatId === 'mp3';
 
   onProgress({ status: 'Fetching video info...', percent: 0 });
 
-  // Get title for filename
   let title = `video_${Date.now()}`;
   try {
     const meta = await getVideoMeta(url);
@@ -162,15 +201,15 @@ const downloadMedia = async (url, formatId, onProgress) => {
 
   onProgress({ status: 'Downloading...', percent: 2 });
 
-  await new Promise((resolve, reject) => {
+  await withRetry(() => new Promise((resolve, reject) => {
     const args = [
       url,
-      '--no-playlist',
       '--ffmpeg-location', ffmpegDir,
       '-o', outPath,
       '--embed-thumbnail',
       '--add-metadata',
-      '--newline',          // one progress line per line — easier to parse
+      '--newline',
+      ...COMMON_FLAGS,
     ];
 
     if (isAudio) {
@@ -181,43 +220,32 @@ const downloadMedia = async (url, formatId, onProgress) => {
 
     const proc = spawn(YTDLP, args, { shell: false });
 
-    // yt-dlp writes progress lines to stdout (not stderr)
     proc.stdout.on('data', (chunk) => {
-      const lines = chunk.toString().split('\n');
-      for (const line of lines) {
+      for (const line of chunk.toString().split('\n')) {
         const prog  = parseProgress(line);
         const stage = parseStage(line);
-        if (prog) {
-          onProgress({ percent: Math.min(prog.percent, 95), speed: prog.speed, eta: prog.eta });
-        }
-        if (stage) {
-          // Clear speed/eta when entering merge/processing phase
-          const isProcessing = stage === 'Processing';
-          onProgress({ status: stage, ...(isProcessing ? { speed: '', eta: '' } : {}) });
-        }
+        if (prog)  onProgress({ percent: Math.min(prog.percent, 95), speed: prog.speed, eta: prog.eta });
+        if (stage) onProgress({ status: stage, ...(stage === 'Processing' ? { speed: '', eta: '' } : {}) });
       }
     });
 
     let stderr = '';
-    proc.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
-
+    proc.stderr.on('data', d => { stderr += d.toString(); });
     proc.on('close', code => {
       if (code !== 0) return reject(new Error(stderr || `yt-dlp exited with code ${code}`));
       resolve();
     });
     proc.on('error', err => reject(new Error(`Failed to start yt-dlp: ${err.message}`)));
-  });
+  }), 2); // max 2 retries for downloads
 
   onProgress({ status: 'Finalizing...', percent: 98 });
 
-  // Find the actual file (yt-dlp may adjust extension slightly)
   const finalPath = findFile(outPath, ext);
   return { filePath: finalPath, filename: `${safeName}.${ext}` };
 };
 
 const findFile = (expectedPath, ext) => {
   if (fs.existsSync(expectedPath)) return expectedPath;
-  // Scan temp dir for newest matching extension
   const match = fs.readdirSync(TEMP_DIR)
     .filter(f => f.endsWith(`.${ext}`))
     .map(f => ({ f, t: fs.statSync(path.join(TEMP_DIR, f)).mtimeMs }))
@@ -227,13 +255,15 @@ const findFile = (expectedPath, ext) => {
 };
 
 // ── Search ────────────────────────────────────────────────────────────────────
-
 const searchYtDlp = (query, maxResults = 16) =>
-  new Promise((resolve, reject) => {
-    const proc = spawn(YTDLP,
-      [`ytsearch${maxResults}:${query}`, '--flat-playlist', '--dump-single-json', '--no-warnings'],
-      { shell: false }
-    );
+  withRetry(() => new Promise((resolve, reject) => {
+    const args = [
+      `ytsearch${maxResults}:${query}`,
+      '--flat-playlist',
+      '--dump-single-json',
+      ...COMMON_FLAGS,
+    ];
+    const proc = spawn(YTDLP, args, { shell: false });
     let out = '', err = '';
     proc.stdout.on('data', d => { out += d.toString(); });
     proc.stderr.on('data', d => { err += d.toString(); });
@@ -253,8 +283,9 @@ const searchYtDlp = (query, maxResults = 16) =>
       } catch (e) { reject(new Error(`Parse error: ${e.message}`)); }
     });
     proc.on('error', reject);
-  });
+  }));
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
 const bestThumb = (thumbs) => {
   if (!Array.isArray(thumbs) || !thumbs.length) return null;
   return [...thumbs].sort((a, b) =>

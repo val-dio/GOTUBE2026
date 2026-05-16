@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
+set -e
 
-apt-get update
-apt-get install -y ffmpeg python3-pip
-
-pip install yt-dlp
-
+echo "==> Installing Node dependencies"
 npm install
+
+echo "==> Installing yt-dlp"
+curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
+chmod a+rx /usr/local/bin/yt-dlp
+yt-dlp --version
+
+echo "==> Installing FFmpeg"
+apt-get update -qq && apt-get install -y -qq ffmpeg
+ffmpeg -version | head -1
+
+echo "==> Build complete"
