@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # GoTube
 
 A local video downloader and viewer using YouTube API, yt-dlp, and FFmpeg.
@@ -56,3 +57,7 @@ All routes require `x-api-key` header.
 - CORS restricted to `ALLOWED_ORIGIN` only
 - All routes protected by API key (`x-api-key` header)
 - Rate limited to 100 requests per 15 minutes
+=======
+# GOTUBE2026
+this new version of gotube
+>>>>>>> fd26b0b02e2f1190030d01a458da816f89f712a3
