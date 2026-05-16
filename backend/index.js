@@ -20,15 +20,12 @@ const TEMP_DIR     = process.env.TEMP_DIR || './temp';
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
 // CORS — only allow configured frontend origin
+const cors = require("cors");
+
 app.use(cors({
-  origin: (origin, callback) => {
-    const allowed = process.env.ALLOWED_ORIGIN;
-    if (!origin || origin === allowed) return callback(null, true);
-    callback(new Error(`CORS: origin ${origin} not allowed`));
-  },
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type', 'x-api-key'],
-  exposedHeaders: ['Content-Disposition', 'Content-Length'],
+  origin: process.env.ALLOWED_ORIGIN,
+  methods: ["GET", "POST"],
+  credentials: true
 }));
 
 // Rate limiting
