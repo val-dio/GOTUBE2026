@@ -4,24 +4,23 @@ const fs    = require('fs');
 const https = require('https');
 const http  = require('http');
 
-const YTDLP    = process.env.YTDLP_PATH  || 'yt-dlp';
-const FFMPEG   = process.env.FFMPEG_PATH || 'ffmpeg';
+const YTDLP    = process.env.YTDLP_PATH  ? path.resolve(process.env.YTDLP_PATH)  : 'yt-dlp';
+const FFMPEG   = process.env.FFMPEG_PATH ? path.resolve(process.env.FFMPEG_PATH) : 'ffmpeg';
 const TEMP_DIR = path.resolve(process.env.TEMP_DIR || './temp');
 
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
 
 // ── Startup debug: confirm yt-dlp + ffmpeg are reachable ─────────────────────
-exec('which yt-dlp', (err, stdout) =>
-  console.log('[debug] yt-dlp path:', err ? `NOT FOUND (${err.message})` : stdout.trim())
+console.log('[debug] YTDLP_PATH env:', process.env.YTDLP_PATH || 'not set (using yt-dlp)');
+console.log('[debug] FFMPEG_PATH env:', process.env.FFMPEG_PATH || 'not set (using ffmpeg)');
+console.log('[debug] YTDLP resolved:', YTDLP);
+console.log('[debug] FFMPEG resolved:', FFMPEG);
+
+exec(`"${YTDLP}" --version`, (err, stdout) =>
+  console.log('[debug] yt-dlp version:', err ? `NOT FOUND — ${err.message}` : stdout.trim())
 );
-exec('which ffmpeg', (err, stdout) =>
-  console.log('[debug] ffmpeg path:', err ? `NOT FOUND (${err.message})` : stdout.trim())
-);
-exec('yt-dlp --version', (err, stdout) =>
-  console.log('[debug] yt-dlp version:', err ? `ERROR (${err.message})` : stdout.trim())
-);
-exec('ffmpeg -version', (err, stdout) =>
-  console.log('[debug] ffmpeg version:', err ? `ERROR (${err.message})` : stdout.split('\n')[0].trim())
+exec(`"${FFMPEG}" -version`, (err, stdout) =>
+  console.log('[debug] ffmpeg version:', err ? `NOT FOUND — ${err.message}` : stdout.split('\n')[0].trim())
 );
 
 // ── Browser-like headers injected into every yt-dlp call ─────────────────────
@@ -51,12 +50,17 @@ const COMMON_FLAGS = [
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-/** Resolve ffmpeg directory — uses 'which' (Linux/Render) */
+/** Resolve ffmpeg directory — uses FFMPEG_PATH env var or 'which ffmpeg' */
 const getFfmpegDir = () => {
+  // If FFMPEG_PATH is explicitly set, use its directory directly
+  if (process.env.FFMPEG_PATH) {
+    const dir = path.dirname(path.resolve(process.env.FFMPEG_PATH));
+    console.log('[debug] getFfmpegDir from env:', dir);
+    return dir;
+  }
   try {
-    if (FFMPEG !== 'ffmpeg') return path.dirname(FFMPEG);
     const bin = execSync('which ffmpeg', { encoding: 'utf8' }).split('\n')[0].trim();
-    console.log('[debug] getFfmpegDir resolved:', bin);
+    console.log('[debug] getFfmpegDir which:', bin);
     return path.dirname(bin);
   } catch (e) {
     console.warn('[debug] getFfmpegDir fallback /usr/bin:', e.message);
