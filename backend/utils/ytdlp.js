@@ -32,9 +32,9 @@ const BROWSER_HEADERS = [
   '--add-header', 'Referer:https://www.youtube.com/',
 ];
 
-// Use Android player client — avoids JS runtime requirement and reduces 429s
+// Use tv + web player clients — tv client bypasses most format restrictions
 const EXTRACTOR_ARGS = [
-  '--extractor-args', 'youtube:player_client=android,web',
+  '--extractor-args', 'youtube:player_client=tv,web,android',
 ];
 
 // Cookies file path — required on server IPs to bypass YouTube bot detection
@@ -157,17 +157,30 @@ const parseStage = (line) => {
 // ── Video meta ────────────────────────────────────────────────────────────────
 const getVideoMeta = (url) =>
   withRetry(() => new Promise((resolve, reject) => {
-    const args = [url, '--print', 'title', '--print', 'thumbnail', ...flags()];
+    // Use --dump-single-json instead of --print to avoid format selection errors
+    const args = [
+      url,
+      '--dump-single-json',
+      '--skip-download',
+      ...flags(),
+    ];
     console.log('[debug] getVideoMeta:', url);
     const proc = spawn(YTDLP, args, { shell: false });
     let out = '', err = '';
     proc.stdout.on('data', d => { out += d.toString(); });
     proc.stderr.on('data', d => { err += d.toString(); });
-    proc.on('close', () => {
-      const lines = out.trim().split('\n').map(l => l.trim()).filter(Boolean);
-      console.log('[debug] getVideoMeta result:', lines[0] || 'EMPTY', '| err:', err.slice(0, 100));
-      if (lines[0]) return resolve({ title: lines[0], thumbnail: lines[1] || '' });
-      reject(new Error(err || 'Could not fetch video metadata'));
+    proc.on('close', (code) => {
+      try {
+        const info      = JSON.parse(out.trim());
+        const title     = info.title     || '';
+        const thumbnail = info.thumbnail || `https://i.ytimg.com/vi/${info.id}/mqdefault.jpg`;
+        console.log('[debug] getVideoMeta result:', title || 'EMPTY');
+        if (title) return resolve({ title, thumbnail });
+        reject(new Error('No title in metadata'));
+      } catch (_) {
+        console.log('[debug] getVideoMeta parse failed | err:', err.slice(0, 120));
+        reject(new Error(err || 'Could not fetch video metadata'));
+      }
     });
     proc.on('error', reject);
     setTimeout(() => { proc.kill(); reject(new Error('getVideoMeta timeout')); }, 30000);
@@ -213,6 +226,12 @@ const getAvailableFormats = (url) =>
       }
 
       console.log('[debug] detected heights:', [...heights]);
+
+      // If no video formats found, the video may be restricted
+      // Still return MP3 as the only option
+      if (heights.size === 0) {
+        console.warn('[debug] No video formats detected — video may be restricted or storyboard-only');
+      }
 
       const formats = [...heights].sort((a, b) => a - b).map(h => ({
         quality:  HEIGHT_LABELS[h],
@@ -266,7 +285,10 @@ const downloadMedia = async (url, formatId, onProgress) => {
     ];
 
     if (isAudio) {
-      args.push('-x', '--audio-format', 'mp3', '--audio-quality', '0');
+      args.push(
+        '-f', 'bestaudio/best',
+        '-x', '--audio-format', 'mp3', '--audio-quality', '0'
+      );
     } else {
       args.push('-f', formatId, '--merge-output-format', 'mp4');
     }
