@@ -46,20 +46,33 @@ console.log('[debug] TEMP_DIR:', TEMP_DIR);
 
 // ── Cookies — resolve from env or look next to this file ─────────────────────
 const COOKIES_PATH = (() => {
-  if (process.env.COOKIES_PATH) return path.resolve(process.env.COOKIES_PATH);
-  // Try common locations
+  if (process.env.COOKIES_PATH) {
+    const p = path.resolve(process.env.COOKIES_PATH);
+    console.log('[cookies] COOKIES_PATH env set:', p, '| exists:', fs.existsSync(p));
+    return p;
+  }
   const candidates = [
     path.resolve(__dirname, '../cookies.txt'),
+    path.resolve(__dirname, './cookies.txt'),
     '/opt/render/project/src/backend/cookies.txt',
     '/app/cookies.txt',
     '/tmp/cookies.txt',
   ];
-  return candidates.find(p => fs.existsSync(p)) || candidates[0];
+  console.log('[cookies] scanning candidates:');
+  for (const p of candidates) {
+    const exists = fs.existsSync(p);
+    console.log(' ', exists ? '✓ FOUND' : '✗ missing', p);
+    if (exists) return p;
+  }
+  console.warn('[cookies] no cookies.txt found anywhere!');
+  return candidates[0];
 })();
+
+console.log('[cookies] final COOKIES_PATH:', COOKIES_PATH);
 
 const cookiesFlag = () => {
   const exists = fs.existsSync(COOKIES_PATH);
-  if (!exists) console.warn('[debug] cookies.txt NOT FOUND at', COOKIES_PATH);
+  if (!exists) console.warn('[cookies] NOT FOUND at runtime:', COOKIES_PATH);
   return exists ? ['--cookies', COOKIES_PATH] : [];
 };
 
