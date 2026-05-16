@@ -8,12 +8,17 @@ const DownloadPanel = ({ video }) => {
   const [error,   setError]   = useState('');
 
   useEffect(() => {
-    if (!video?.url) return;
+    if (!video?.id && !video?.url) return;
     setLoading(true);
     setError('');
     setFormats([]);
 
-    getVideoData(video.url)
+    // Build full YouTube URL from id if available, else use url as-is
+    const videoUrl = video.id
+      ? `https://www.youtube.com/watch?v=${video.id}`
+      : video.url;
+
+    getVideoData(videoUrl)
       .then(data => setFormats(data.formats || []))
       .catch(() => setError('Could not load formats'))
       .finally(() => setLoading(false));

@@ -1,10 +1,13 @@
-const getVideoId = (url = '') => {
-  const m = url.match(/(?:v=|youtu\.be\/)([^&?/]+)/);
+const getVideoId = (video) => {
+  // Backend returns id field directly from yt-dlp
+  if (video.id) return video.id;
+  // Fallback: parse from url
+  const m = (video.url || '').match(/(?:v=|youtu\.be\/)([^&?/]+)/);
   return m ? m[1] : '';
 };
 
 const VideoPlayer = ({ video }) => {
-  const videoId = getVideoId(video.url);
+  const videoId = getVideoId(video);
 
   return (
     <div className="w-full">

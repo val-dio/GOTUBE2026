@@ -41,7 +41,7 @@ export const VideoProvider = ({ children }) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     try {
       const results = await apiSearch(video.title.split(' ').slice(0, 3).join(' '));
-      setRelated((Array.isArray(results) ? results : []).filter(v => v.url !== video.url));
+      setRelated((Array.isArray(results) ? results : []).filter(v => v.id !== video.id));
     } catch (_) { setRelated([]); }
   }, []);
 

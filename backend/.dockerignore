@@ -1,8 +1,0 @@
-node_modules
-.env
-temp/
-downloads/
-*.log
-.git
-render-build.sh
-bin/
