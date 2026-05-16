@@ -4,8 +4,8 @@ const fs    = require('fs');
 const https = require('https');
 const http  = require('http');
 
-const YTDLP    = process.env.YTDLP_PATH  ? path.resolve(process.env.YTDLP_PATH)  : 'yt-dlp';
-const FFMPEG   = process.env.FFMPEG_PATH ? path.resolve(process.env.FFMPEG_PATH) : 'ffmpeg';
+const YTDLP    = 'yt-dlp';
+const FFMPEG   = 'ffmpeg';
 const TEMP_DIR = path.resolve(process.env.TEMP_DIR || './temp');
 
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
@@ -16,10 +16,10 @@ console.log('[debug] FFMPEG_PATH env:', process.env.FFMPEG_PATH || 'not set (usi
 console.log('[debug] YTDLP resolved:', YTDLP);
 console.log('[debug] FFMPEG resolved:', FFMPEG);
 
-exec(`"${YTDLP}" --version`, (err, stdout) =>
+exec('yt-dlp --version', (err, stdout) =>
   console.log('[debug] yt-dlp version:', err ? `NOT FOUND — ${err.message}` : stdout.trim())
 );
-exec(`"${FFMPEG}" -version`, (err, stdout) =>
+exec('ffmpeg -version', (err, stdout) =>
   console.log('[debug] ffmpeg version:', err ? `NOT FOUND — ${err.message}` : stdout.split('\n')[0].trim())
 );
 
@@ -65,22 +65,12 @@ const flags = () => [...COMMON_FLAGS, ...cookiesFlag()];
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-/** Resolve ffmpeg directory — uses FFMPEG_PATH env var or 'which ffmpeg' */
+/** ffmpeg is on system PATH in Docker — return its directory */
 const getFfmpegDir = () => {
-  // If FFMPEG_PATH is explicitly set, use its directory directly
-  if (process.env.FFMPEG_PATH) {
-    const dir = path.dirname(path.resolve(process.env.FFMPEG_PATH));
-    console.log('[debug] getFfmpegDir from env:', dir);
-    return dir;
-  }
   try {
-    const bin = execSync('which ffmpeg', { encoding: 'utf8' }).split('\n')[0].trim();
-    console.log('[debug] getFfmpegDir which:', bin);
+    const bin = execSync('which ffmpeg', { encoding: 'utf8' }).trim();
     return path.dirname(bin);
-  } catch (e) {
-    console.warn('[debug] getFfmpegDir fallback /usr/bin:', e.message);
-    return '/usr/bin';
-  }
+  } catch { return '/usr/bin'; }
 };
 
 const sanitizeFilename = (name) =>

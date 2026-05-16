@@ -45,22 +45,14 @@ app.use(express.json());
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 app.get('/debug', (_req, res) => {
-  const { exec } = require('child_process');
-  const ytdlp  = process.env.YTDLP_PATH  ? require('path').resolve(process.env.YTDLP_PATH)  : 'yt-dlp';
-  const ffmpeg = process.env.FFMPEG_PATH ? require('path').resolve(process.env.FFMPEG_PATH) : 'ffmpeg';
-  const results = {
-    ytdlp_path_env:  process.env.YTDLP_PATH  || 'not set',
-    ffmpeg_path_env: process.env.FFMPEG_PATH || 'not set',
-    ytdlp_resolved:  ytdlp,
-    ffmpeg_resolved: ffmpeg,
-  };
+  const results = {};
   let pending = 4;
   const done = () => { if (--pending === 0) res.json(results); };
 
-  exec(`"${ytdlp}" --version`,  (e, o) => { results.ytdlp_version  = e ? `ERROR: ${e.message}` : o.trim(); done(); });
-  exec(`"${ffmpeg}" -version`,  (e, o) => { results.ffmpeg_version = e ? `ERROR: ${e.message}` : o.split('\n')[0]; done(); });
-  exec('which yt-dlp',          (e, o) => { results.ytdlp_which    = e ? 'NOT FOUND' : o.trim(); done(); });
-  exec('which ffmpeg',          (e, o) => { results.ffmpeg_which   = e ? 'NOT FOUND' : o.trim(); done(); });
+  exec('which yt-dlp',     (e, o) => { results.ytdlp_path    = e ? 'NOT FOUND' : o.trim(); done(); });
+  exec('which ffmpeg',     (e, o) => { results.ffmpeg_path   = e ? 'NOT FOUND' : o.trim(); done(); });
+  exec('yt-dlp --version', (e, o) => { results.ytdlp_version = e ? 'ERROR'     : o.trim(); done(); });
+  exec('ffmpeg -version',  (e, o) => { results.ffmpeg_version= e ? 'ERROR'     : o.split('\n')[0]; done(); });
 });
 
 app.use('/api/contact', contactRoutes);
