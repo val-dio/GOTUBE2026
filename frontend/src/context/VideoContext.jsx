@@ -36,11 +36,25 @@ export const VideoProvider = ({ children }) => {
     
     if (match && match[1]) {
       const videoId = match[1];
-      openVideo({
-        id: videoId,
-        title: 'Video from URL',
-        thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
-      });
+      setLoading(true);
+      try {
+        const results = await apiSearch(videoId);
+        const normResults = Array.isArray(results) ? results.map(normalize) : [];
+        const realVideo = normResults.find(v => v.id === videoId) || normResults[0] || {
+          id: videoId,
+          title: 'YouTube Video',
+          thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        };
+        openVideo(realVideo);
+      } catch (e) {
+        openVideo({
+          id: videoId,
+          title: 'YouTube Video',
+          thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+        });
+      } finally {
+        setLoading(false);
+      }
       return;
     }
 
