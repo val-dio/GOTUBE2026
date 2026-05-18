@@ -1,9 +1,9 @@
 import axios from 'axios';
 
-const RENDER_BASE  = (import.meta.env.VITE_RENDER_URL  || '').trim() || 'https://gotubebackend.onrender.com';
-const RAILWAY_BASE = (import.meta.env.VITE_RAILWAY_URL || '').trim() || 'https://ytdlp-worker-production.up.railway.app';
+const RENDER_BASE = (import.meta.env.VITE_RENDER_URL || '').trim();
+const RAILWAY_BASE = (import.meta.env.VITE_RAILWAY_URL || '').trim();
 
-const renderClient  = axios.create({ baseURL: RENDER_BASE });
+const renderClient = axios.create({ baseURL: RENDER_BASE });
 const railwayClient = axios.create({ baseURL: RAILWAY_BASE });
 
 // 1. Search Videos (Render Backend)
@@ -14,9 +14,9 @@ export const searchVideos = (q) =>
 export const getTrending = () =>
   renderClient.get('/api/trending').then(r => r.data.items || []);
 
-// 3. Contact Form (Render Backend)
+// 3. Contact Form (Vercel Serverless Function)
 export const sendContactMessage = (name, email, message) =>
-  renderClient.post('/api/contact', { name, email, message }).then(r => r.data);
+  axios.post('/api/contact', { name, email, message }).then(r => r.data);
 
 // 4. Get Railway download URL (Railway Backend)
 export const getDownloadUrl = (id, format) =>
@@ -48,7 +48,7 @@ export const downloadVideoBlob = (id, format, onProgress) =>
       }
     };
 
-    xhr.onerror  = () => reject(new Error('Network error — connection failed'));
+    xhr.onerror = () => reject(new Error('Network error — connection failed'));
     xhr.ontimeout = () => reject(new Error('Request timed out'));
     xhr.send();
   });
