@@ -7,10 +7,10 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const Field = ({ label, error, children }) => (
   <div className="flex flex-col gap-1">
-    <label className="text-xs font-medium text-gray-600 dark:text-gray-400">{label}</label>
+    <label className="text-xs font-medium text-gray-400">{label}</label>
     {children}
     {error && (
-      <p className="text-xs text-red-500 dark:text-red-400 flex items-center gap-1">
+      <p className="text-xs text-red-400 flex items-center gap-1">
         <AlertCircle className="w-3 h-3 shrink-0" />{error}
       </p>
     )}
@@ -18,12 +18,12 @@ const Field = ({ label, error, children }) => (
 );
 
 const inputCls = (err) =>
-  `w-full px-3 py-2 text-sm rounded-lg border bg-white dark:bg-gray-800
-   text-gray-900 dark:text-gray-100 outline-none transition-colors
-   placeholder:text-gray-400 dark:placeholder:text-gray-500
+  `w-full px-3 py-2 text-sm rounded-lg border bg-[#0f0f0f]
+   text-gray-100 outline-none transition-colors
+   placeholder:text-gray-600
    ${err
-     ? 'border-red-400 dark:border-red-500 focus:border-red-500'
-     : 'border-gray-300 dark:border-gray-600 focus:border-red-500 dark:focus:border-red-400'
+     ? 'border-red-500 focus:border-red-400'
+     : 'border-[#3e3e3e] focus:border-red-600'
    }`;
 
 const ContactForm = () => {

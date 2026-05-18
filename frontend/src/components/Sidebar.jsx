@@ -11,7 +11,7 @@ import SidebarItem from './SidebarItem';
 const YEAR = new Date().getFullYear();
 
 const CATEGORIES = [
-  { label: 'Home',       icon: Home,       query: `trending videos ${YEAR}` },
+  { label: 'Home',       icon: Home,       query: null },
   { label: 'Trending',   icon: TrendingUp,  query: `trending viral ${YEAR}` },
   { label: 'Highlights', icon: Star,        query: `best highlights ${YEAR}` },
   { label: 'Movies',     icon: Film,        query: `movies trailers ${YEAR}` },
@@ -31,10 +31,11 @@ const FOOTER_LINKS = [
 ];
 
 const Sidebar = () => {
-  const { open, close }       = useSidebar();
+  const { open, close }         = useSidebar();
   const { search, loadDefault } = useVideo();
-  const { open: openModal }   = useModal();
+  const { open: openModal }     = useModal();
 
+  // Close on Escape key
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') close(); };
     document.addEventListener('keydown', onKey);
@@ -44,8 +45,9 @@ const Sidebar = () => {
   const handleCategory = (label) => {
     const cat = CATEGORIES.find(c => c.label === label);
     if (!cat) return;
-    if (label === 'Home') loadDefault();
+    if (!cat.query) loadDefault();
     else search(cat.query);
+    if (window.innerWidth < 1024) close();
   };
 
   const handleFooterLink = (modal) => {
@@ -55,7 +57,7 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Backdrop overlay on mobile */}
       {open && (
         <div
           className="fixed inset-0 z-30 bg-black/50 lg:hidden"
@@ -64,7 +66,7 @@ const Sidebar = () => {
         />
       )}
 
-      {/* Sidebar panel */}
+      {/* Sidebar drawer */}
       <aside
         className={`fixed top-14 left-0 z-40 h-[calc(100vh-3.5rem)] w-56
                     bg-white dark:bg-gray-900
@@ -73,7 +75,7 @@ const Sidebar = () => {
                     transition-transform duration-300 ease-in-out
                     ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        {/* Category nav */}
+        {/* Nav categories */}
         <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
           {CATEGORIES.map(({ label, icon }) => (
             <SidebarItem
@@ -88,7 +90,7 @@ const Sidebar = () => {
         {/* Divider */}
         <div className="mx-3 border-t border-gray-200 dark:border-gray-700" />
 
-        {/* Small footer links */}
+        {/* Footer links */}
         <div className="px-3 py-2 space-y-0.5">
           {FOOTER_LINKS.map(({ label, modal }) => (
             <button

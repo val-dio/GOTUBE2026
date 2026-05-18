@@ -3,7 +3,7 @@ import { createContext, useContext, useState } from 'react';
 const SidebarContext = createContext();
 
 export const SidebarProvider = ({ children }) => {
-  const [open,           setOpen]           = useState(false);
+  const [open,           setOpen]           = useState(true);   // expanded by default
   const [activeCategory, setActiveCategory] = useState('Home');
 
   const toggle = () => setOpen(o => !o);
