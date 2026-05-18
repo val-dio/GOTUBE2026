@@ -2,6 +2,7 @@ import axios from 'axios';
 
 const RENDER_BASE = (import.meta.env.VITE_RENDER_URL || '').trim();
 const RAILWAY_BASE = (import.meta.env.VITE_RAILWAY_URL || '').trim();
+const CONTACT_BASE = (import.meta.env.VITE_CONTACT_URL || '').trim();
 
 const renderClient = axios.create({ baseURL: RENDER_BASE });
 const railwayClient = axios.create({ baseURL: RAILWAY_BASE });
@@ -16,7 +17,7 @@ export const getTrending = () =>
 
 // 3. Contact Form (Vercel Serverless Function)
 export const sendContactMessage = (name, email, message) =>
-  axios.post('/api/contact', { name, email, message }).then(r => r.data);
+  axios.post(`${CONTACT_BASE}/api/contact`, { name, email, message }).then(r => r.data);
 
 // 4. Get Railway download URL (Railway Backend)
 export const getDownloadUrl = (id, format) =>
