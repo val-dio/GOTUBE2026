@@ -8,20 +8,20 @@ import { useVideo } from '../context/VideoContext';
 import { useModal } from '../context/ModalContext';
 import SidebarItem from './SidebarItem';
 
-const YEAR = new Date().getFullYear();
+
 
 const CATEGORIES = [
   { label: 'Home',       icon: Home,       query: null },
-  { label: 'Trending',   icon: TrendingUp,  query: `trending viral ${YEAR}` },
-  { label: 'Highlights', icon: Star,        query: `best highlights ${YEAR}` },
-  { label: 'Movies',     icon: Film,        query: `movies trailers ${YEAR}` },
-  { label: 'Gaming',     icon: Gamepad2,    query: `gaming videos ${YEAR}` },
-  { label: 'Music',      icon: Music,       query: `music videos ${YEAR}` },
-  { label: 'Sports',     icon: Trophy,      query: `sports highlights ${YEAR}` },
+  { label: 'Trending',   icon: TrendingUp,  query: 'trending viral' },
+  { label: 'Highlights', icon: Star,        query: 'best highlights' },
+  { label: 'Movies',     icon: Film,        query: 'movies trailers' },
+  { label: 'Gaming',     icon: Gamepad2,    query: 'gaming videos' },
+  { label: 'Music',      icon: Music,       query: 'music videos' },
+  { label: 'Sports',     icon: Trophy,      query: 'sports highlights' },
   { label: 'News',       icon: Newspaper,   query: 'world news today' },
   { label: 'Live',       icon: Radio,       query: 'live stream now' },
-  { label: 'Podcasts',   icon: Mic2,        query: `best podcasts ${YEAR}` },
-  { label: 'Shorts',     icon: Play,        query: `youtube shorts ${YEAR}` },
+  { label: 'Podcasts',   icon: Mic2,        query: 'best podcasts' },
+  { label: 'Shorts',     icon: Play,        query: 'youtube shorts' },
 ];
 
 const FOOTER_LINKS = [
