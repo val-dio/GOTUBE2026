@@ -4,12 +4,12 @@ import { downloadVideoBlob } from '../services/api';
 
 /* ─── Quality Options (all 6 matching HTML + user request) ─── */
 const QUALITIES = [
-  { value: 'mp3',   label: 'MP3 Audio Track' },
-  { value: '360p',  label: 'MP4 Video (360p)' },
-  { value: '480p',  label: 'MP4 Video (480p)' },
-  { value: '720p',  label: 'MP4 Video (720p)'  },
-  { value: '1080p', label: 'MP4 Video (1080p)' },
-  { value: '4k',    label: 'MP4 Video (4K)'    },
+  { value: 'mp3', label: 'MP3 Audio Track' },
+  { value: 'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/best[height<=360][ext=mp4]/best[height<=360]', label: 'MP4 Video (360p)' },
+  { value: 'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/best[height<=480][ext=mp4]/best[height<=480]', label: 'MP4 Video (480p)' },
+  { value: 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best[height<=720]', label: 'MP4 Video (720p)' },
+  { value: 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/best[height<=1080]', label: 'MP4 Video (1080p)' },
+  { value: 'bestvideo[height<=2160][ext=mp4]+bestaudio[ext=m4a]/best[height<=2160]', label: 'MP4 Video (4K)' },
 ];
 
 /* ─── Download state config ─── */
@@ -35,7 +35,7 @@ const STATUS_TEXT = {
 
 const Player = () => {
   const { currentVideo, videos, openVideo, goHome } = useVideo();
-  const [quality,   setQuality]   = useState('720p');
+  const [quality,   setQuality]   = useState('bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/best[height<=720]');
   const [dlState,   setDlState]   = useState('idle');
   const [progress,  setProgress]  = useState(0);
   const [dlError,   setDlError]   = useState('');
