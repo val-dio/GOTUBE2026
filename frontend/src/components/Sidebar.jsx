@@ -12,16 +12,16 @@ import SidebarItem from './SidebarItem';
 
 const CATEGORIES = [
   { label: 'Home',       icon: Home,       query: null },
-  { label: 'Trending',   icon: TrendingUp,  query: 'trending viral' },
-  { label: 'Highlights', icon: Star,        query: 'best highlights' },
-  { label: 'Movies',     icon: Film,        query: 'movies trailers' },
-  { label: 'Gaming',     icon: Gamepad2,    query: 'gaming videos' },
-  { label: 'Music',      icon: Music,       query: 'music videos' },
-  { label: 'Sports',     icon: Trophy,      query: 'sports highlights' },
-  { label: 'News',       icon: Newspaper,   query: 'world news today' },
-  { label: 'Live',       icon: Radio,       query: 'live stream now' },
-  { label: 'Podcasts',   icon: Mic2,        query: 'best podcasts' },
-  { label: 'Shorts',     icon: Play,        query: 'youtube shorts' },
+  { label: 'Trending',   icon: TrendingUp,  query: 'trending' },
+  { label: 'Highlights', icon: Star,        query: 'highlights' },
+  { label: 'Movies',     icon: Film,        query: 'movies' },
+  { label: 'Gaming',     icon: Gamepad2,    query: 'gaming' },
+  { label: 'Music',      icon: Music,       query: 'music ' },
+  { label: 'Sports',     icon: Trophy,      query: 'sports' },
+  { label: 'News',       icon: Newspaper,   query: ' news ' },
+  { label: 'Live',       icon: Radio,       query: 'live' },
+  { label: 'Podcasts',   icon: Mic2,        query: 'podcasts' },
+  { label: 'Shorts',     icon: Play,        query: 'shorts' },
 ];
 
 const FOOTER_LINKS = [
