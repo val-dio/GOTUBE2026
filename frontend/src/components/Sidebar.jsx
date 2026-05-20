@@ -11,7 +11,7 @@ import SidebarItem from './SidebarItem';
 
 
 const CATEGORIES = [
-  { label: 'Home',       icon: Home,       query: null },
+  { label: 'Home',       icon: Home,       query: 'hip hop' },
   { label: 'Trending',   icon: TrendingUp,  query: 'trending' },
   { label: 'Highlights', icon: Star,        query: 'highlights' },
   { label: 'Movies',     icon: Film,        query: 'movies' },
