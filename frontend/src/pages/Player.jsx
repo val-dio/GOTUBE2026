@@ -2,14 +2,15 @@ import { useState, useRef } from 'react';
 import { useVideo } from '../context/VideoContext';
 import { downloadVideoBlob } from '../services/api';
 
-/* ─── Quality Options (all 6 matching HTML + user request) ─── */
+/* ─── Quality Options ─── */
 const QUALITIES = [
-  { value: 'mp3', label: 'MP3 Audio Track' },
-  { value: '360', label: 'MP4 Video (360p)' },
-  { value: '480', label: 'MP4 Video (480p)' },
-  { value: '720', label: 'MP4 Video (720p)' },
-  { value: '1080', label: 'MP4 Video (1080p)' },
-  { value: '2160', label: 'MP4 Video (4K)' },
+  { value: '144', label: '144p', type: 'video' },
+  { value: '240', label: '240p', type: 'video' },
+  { value: '360', label: '360p', type: 'video' },
+  { value: '480', label: '480p', type: 'video' },
+  { value: '720', label: '720p', type: 'video', hd: true },
+  { value: '1080', label: '1080p', type: 'video', hd: true },
+  { value: 'mp3', label: 'MP3', type: 'audio' },
 ];
 
 /* ─── Download state config ─── */
@@ -157,7 +158,7 @@ const Player = () => {
               </div>
 
               {/* Controls */}
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2.5">
                 {QUALITIES.map(q => (
                   <button
                     key={q.value}
@@ -166,23 +167,38 @@ const Player = () => {
                       executeDownload(q.value);
                     }}
                     disabled={isActive}
-                    className="bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-medium px-4 py-2 rounded-lg transition-colors text-sm flex items-center justify-center gap-1"
+                    className={`relative flex items-center justify-center gap-1.5 px-4 py-2 rounded-full border transition-colors text-[13px] font-semibold tracking-wide
+                      ${isActive && quality === q.value
+                        ? 'bg-[#27272a] border-[#3f3f46] text-white cursor-wait'
+                        : 'bg-[#18181b] hover:bg-[#27272a] border-[#27272a] text-gray-300 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed'
+                      }`}
                   >
-                    {isActive && quality === q.value ? (
-                      <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-                      </svg>
-                    ) : dlState === 'completed' && quality === q.value ? (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/>
+                    {q.type === 'video' ? (
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                       </svg>
                     ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
                       </svg>
                     )}
-                    {q.label}
+
+                    <span>{q.label}</span>
+
+                    {q.hd && (
+                      <span className="ml-0.5 px-1 py-0.5 text-[9px] leading-none font-bold bg-red-600 text-white rounded-sm">
+                        HD
+                      </span>
+                    )}
+                    
+                    {isActive && quality === q.value && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full">
+                         <svg className="w-4 h-4 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                          </svg>
+                      </div>
+                    )}
                   </button>
                 ))}
               </div>
