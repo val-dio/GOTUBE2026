@@ -1,11 +1,18 @@
 import { useVideo } from '../context/VideoContext';
+import { useNavigate } from 'react-router-dom';
 import SearchBar from './SearchBar';
 import ThemeToggle from './ThemeToggle';
 import HamburgerButton from './HamburgerButton';
-import reactLogo from '../assets/react.png';
+import logo from '../assets/logo.svg';
 
 const Header = () => {
   const { loadDefault } = useVideo();
+  const navigate = useNavigate();
+
+  const handleHome = () => {
+    loadDefault();
+    navigate('/');
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 flex items-center gap-2 px-3 sm:px-4 h-14
@@ -15,13 +22,11 @@ const Header = () => {
 
       {/* Logo */}
       <button
-        onClick={() => { loadDefault(); window.history.pushState({}, '', '/'); }}
+        onClick={handleHome}
         aria-label="Go home"
-        className="shrink-0 flex items-center hover:opacity-80 transition-opacity whitespace-nowrap"
+        className="shrink-0 flex items-center gap-2 hover:opacity-80 transition-opacity whitespace-nowrap"
       >
-        {/* Mobile Logo */}
-        <img src={reactLogo} alt="Logo" className="w-7 h-7 sm:hidden object-contain" />
-        {/* Desktop Text */}
+        <img src={logo} alt="GoTube logo" className="w-7 h-7 object-contain" />
         <span className="hidden sm:block text-lg font-extrabold tracking-tight text-red-600">
           GoTube
         </span>

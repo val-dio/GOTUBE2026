@@ -1,46 +1,48 @@
-import { useEffect } from 'react';
+import { useEffect, memo } from 'react';
+import { useParams } from 'react-router-dom';
 import { useVideo } from '../context/VideoContext';
 import VideoGrid from '../components/VideoGrid';
+import EmptyState from '../components/ui/EmptyState';
 
-const Spinner = () => (
-  <div className="flex justify-center items-center py-20 col-span-full">
-    <svg className="w-8 h-8 animate-spin text-red-600" fill="none" viewBox="0 0 24 24">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
-    </svg>
-  </div>
-);
+const Home = memo(() => {
+  const { query } = useParams();
+  const { videos, loading, searchError, feedHeading, search, loadDefault } = useVideo();
 
-const Home = () => {
-  const { videos, loading, searchError, loadDefault } = useVideo();
-
+  /* Trigger search when URL has /search/:query */
   useEffect(() => {
-    if (!videos.length) loadDefault();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (query) {
+      search(query);
+    } else if (!videos.length) {
+      loadDefault();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   return (
-    <div className="px-4 py-6 max-w-screen-xl mx-auto min-h-full bg-white dark:bg-gray-950 transition-colors">
+    <div className="px-4 py-6 max-w-screen-xl mx-auto min-h-full">
+
+      {/* Feed heading */}
+      {feedHeading && !loading && (
+        <h1 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-5 tracking-wide">
+          {feedHeading}
+        </h1>
+      )}
+
+      {/* Search error */}
       {searchError && (
         <div className="mb-6 px-4 py-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 text-sm">
           {searchError}
         </div>
       )}
 
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <Spinner />
-        </div>
-      ) : (
-        <VideoGrid videos={videos} />
-      )}
+      {/* Video grid — passes loading for skeleton display */}
+      <VideoGrid videos={videos} loading={loading} />
 
-      {!loading && !videos.length && !searchError && (
-        <p className="text-center text-gray-500 py-20 text-sm">
-          Search for a video to get started.
-        </p>
-      )}
+      {/* Empty state — only when not loading and no videos */}
+      {!loading && !videos.length && !searchError && <EmptyState />}
     </div>
   );
-};
+});
 
+Home.displayName = 'Home';
 export default Home;

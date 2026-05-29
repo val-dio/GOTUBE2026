@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+import { useEffect, memo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Home, TrendingUp, Star, Film, Gamepad2,
   Music, Trophy, Newspaper, Radio, Mic2, Play,
@@ -8,34 +9,33 @@ import { useVideo } from '../context/VideoContext';
 import { useModal } from '../context/ModalContext';
 import SidebarItem from './SidebarItem';
 
-
-
 const CATEGORIES = [
-  { label: 'Home', icon: Home, query: null },
-  { label: 'Trending', icon: TrendingUp, query: 'trending' },
-  { label: 'Highlights', icon: Star, query: 'highlights' },
-  { label: 'Movies', icon: Film, query: 'movies' },
-  { label: 'Gaming', icon: Gamepad2, query: 'gaming' },
-  { label: 'Music', icon: Music, query: 'music ' },
-  { label: 'Sports', icon: Trophy, query: 'sports' },
-  { label: 'News', icon: Newspaper, query: ' news ' },
-  { label: 'Live', icon: Radio, query: 'live' },
-  { label: 'Podcasts', icon: Mic2, query: 'podcasts' },
-  { label: 'Shorts', icon: Play, query: 'shorts' },
+  { label: 'Home',       icon: Home,       query: null        },
+  { label: 'Trending',   icon: TrendingUp, query: 'trending'  },
+  { label: 'Highlights', icon: Star,       query: 'highlights' },
+  { label: 'Movies',     icon: Film,       query: 'movies'    },
+  { label: 'Gaming',     icon: Gamepad2,   query: 'gaming'    },
+  { label: 'Music',      icon: Music,      query: 'music'     },
+  { label: 'Sports',     icon: Trophy,     query: 'sports'    },
+  { label: 'News',       icon: Newspaper,  query: 'news'      },
+  { label: 'Live',       icon: Radio,      query: 'live'      },
+  { label: 'Podcasts',   icon: Mic2,       query: 'podcasts'  },
+  { label: 'Shorts',     icon: Play,       query: 'shorts'    },
 ];
 
 const FOOTER_LINKS = [
-  { label: 'About Us', modal: 'about' },
-  { label: 'FAQs', modal: 'faqs' },
+  { label: 'About Us',  modal: 'about'   },
+  { label: 'FAQs',      modal: 'faqs'    },
   { label: 'Contact Us', modal: 'contact' },
 ];
 
-const Sidebar = () => {
+const Sidebar = memo(() => {
   const { open, close } = useSidebar();
   const { search, loadDefault } = useVideo();
   const { open: openModal } = useModal();
+  const navigate = useNavigate();
 
-  // Close on Escape key
+  /* Close on Escape */
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') close(); };
     document.addEventListener('keydown', onKey);
@@ -45,8 +45,13 @@ const Sidebar = () => {
   const handleCategory = (label) => {
     const cat = CATEGORIES.find(c => c.label === label);
     if (!cat) return;
-    if (!cat.query) loadDefault();
-    else search(cat.query);
+    if (!cat.query) {
+      loadDefault();
+      navigate('/');
+    } else {
+      search(cat.query);
+      navigate(`/search/${encodeURIComponent(cat.query)}`);
+    }
     if (window.innerWidth < 1024) close();
   };
 
@@ -57,7 +62,7 @@ const Sidebar = () => {
 
   return (
     <>
-      {/* Backdrop overlay on mobile */}
+      {/* Mobile backdrop */}
       {open && (
         <div
           className="fixed inset-0 z-30 bg-black/50 lg:hidden"
@@ -75,8 +80,8 @@ const Sidebar = () => {
                     transition-transform duration-300 ease-in-out
                     ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
-        {/* Nav categories */}
-        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
+        {/* Categories */}
+        <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5" aria-label="Main navigation">
           {CATEGORIES.map(({ label, icon }) => (
             <SidebarItem
               key={label}
@@ -87,7 +92,6 @@ const Sidebar = () => {
           ))}
         </nav>
 
-        {/* Divider */}
         <div className="mx-3 border-t border-gray-200 dark:border-gray-700" />
 
         {/* Footer links */}
@@ -106,16 +110,15 @@ const Sidebar = () => {
           ))}
         </div>
 
-        {/* Divider */}
         <div className="mx-3 border-t border-gray-200 dark:border-gray-700" />
 
-        {/* Copyright */}
         <div className="px-4 py-3 text-center">
           <p className="text-xs text-gray-400 dark:text-gray-500">© Valdiosolution</p>
         </div>
       </aside>
     </>
   );
-};
+});
 
+Sidebar.displayName = 'Sidebar';
 export default Sidebar;
