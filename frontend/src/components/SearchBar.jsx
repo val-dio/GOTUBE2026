@@ -12,7 +12,6 @@ const SearchBar = memo(() => {
     e.preventDefault();
     const trimmed = q.trim();
     if (!trimmed) return;
-    search(trimmed);
     navigate(`/search/${encodeURIComponent(trimmed)}`);
   };
 

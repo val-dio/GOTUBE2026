@@ -16,6 +16,7 @@ export const VideoProvider = ({ children }) => {
   const [feedHeading,  setFeedHeading] = useState('Search for videos to get started');
 
   const searchCache = useRef({});
+  const pendingRequests = useRef({});
 
   /* Initialize home feed from history on first load */
   useEffect(() => {
@@ -102,10 +103,6 @@ export const VideoProvider = ({ children }) => {
       return;
     }
 
-    /* Regular text search */
-    setLoading(true);
-    setSearchError('');
-
     /* Cache hit */
     if (searchCache.current[q]) {
       setVideos(searchCache.current[q]);
@@ -113,6 +110,13 @@ export const VideoProvider = ({ children }) => {
       setLoading(false);
       return;
     }
+
+    if (pendingRequests.current[q]) return;
+    pendingRequests.current[q] = true;
+
+    /* Regular text search */
+    setLoading(true);
+    setSearchError('');
 
     try {
       const results    = await apiSearch(q);
@@ -129,6 +133,7 @@ export const VideoProvider = ({ children }) => {
     } catch (e) {
       setSearchError(e.response?.data?.error || 'Search failed. Please try again.');
     } finally {
+      delete pendingRequests.current[q];
       setLoading(false);
     }
   }, [openVideo]);
