@@ -55,8 +55,24 @@ export const VideoProvider = ({ children }) => {
   }, [loadDefault, navigate]);
 
   /* ── Search ── */
-  const search = useCallback(async (q) => {
+  const search = useCallback(async (q, customHeading = null) => {
     if (!q || !q.trim()) return;
+
+    const CATEGORY_LABELS = {
+      trending: 'Trending',
+      highlights: 'Highlights',
+      movies: 'Movies',
+      gaming: 'Gaming',
+      music: 'Music',
+      sports: 'Sports',
+      news: 'News',
+      live: 'Live',
+      podcasts: 'Podcasts',
+      shorts: 'Shorts'
+    };
+    
+    const resolvedHeading = customHeading || CATEGORY_LABELS[q.toLowerCase()] || `Results for: "${q}"`;
+
 
     /* Handle direct YouTube URL paste → open player immediately */
     const ytRegex = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\\w-]{11})/i;
@@ -93,7 +109,7 @@ export const VideoProvider = ({ children }) => {
     /* Cache hit */
     if (searchCache.current[q]) {
       setVideos(searchCache.current[q]);
-      setFeedHeading(`Results for: "${q}"`);
+      setFeedHeading(resolvedHeading);
       setLoading(false);
       return;
     }
@@ -109,7 +125,7 @@ export const VideoProvider = ({ children }) => {
       saveHistory(newHistory);
 
       setVideos(normalized);
-      setFeedHeading(`Results for: "${q}"`);
+      setFeedHeading(resolvedHeading);
     } catch (e) {
       setSearchError(e.response?.data?.error || 'Search failed. Please try again.');
     } finally {

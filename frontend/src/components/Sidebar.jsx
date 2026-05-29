@@ -49,7 +49,7 @@ const Sidebar = memo(() => {
       loadDefault();
       navigate('/');
     } else {
-      search(cat.query);
+      search(cat.query, cat.label);
       navigate(`/search/${encodeURIComponent(cat.query)}`);
     }
     if (window.innerWidth < 1024) close();
