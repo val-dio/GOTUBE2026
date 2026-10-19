@@ -1,15 +1,6 @@
 import { memo } from 'react';
 import Spinner from '../ui/Spinner';
 
-/* Quality options shown to the user — MP3 + video qualities only */
-const QUALITIES = [
-  { value: 'mp3',  label: 'MP3',   type: 'audio' },
-  { value: '360',  label: '360p',  type: 'video' },
-  { value: '480',  label: '480p',  type: 'video' },
-  { value: '720',  label: '720p',  type: 'video', hd: true },
-  { value: '1080', label: '1080p', type: 'video', hd: true },
-];
-
 const AudioIcon = () => (
   <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
@@ -22,50 +13,53 @@ const VideoIcon = () => (
   </svg>
 );
 
-/**
- * DownloadButtons — renders quality selection buttons.
- * Props:
- *  - activeFormat: string | null  (currently downloading format)
- *  - isDownloading: bool
- *  - onDownload(format): fn
- */
-const DownloadButtons = memo(({ activeFormat, isDownloading, onDownload }) => (
-  <div className="flex flex-wrap items-center gap-2.5">
-    {QUALITIES.map(({ value, label, type, hd }) => {
-      const isActive = isDownloading && activeFormat === value;
+const DownloadButtons = memo(({ formats, formatsLoading, activeFormat, isDownloading, onDownload }) => {
+  if (formatsLoading) {
+    return (
+      <div className="flex items-center gap-2 text-gray-400 text-sm">
+        <Spinner size="sm" />
+        <span>Loading formats...</span>
+      </div>
+    );
+  }
 
-      return (
-        <button
-          key={value}
-          onClick={() => onDownload(value)}
-          disabled={isDownloading}
-          aria-label={`Download ${label}`}
-          className={`
-            relative flex items-center justify-center gap-1.5 px-4 py-2 rounded-full border
-            transition-all duration-200 text-[13px] font-semibold tracking-wide select-none
-            ${isActive
-              ? 'bg-gray-700 border-gray-600 text-white cursor-wait'
-              : 'bg-gray-900 hover:bg-gray-700 border-gray-700 text-gray-300 hover:text-white hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100'
-            }
-          `}
-        >
-          {type === 'audio' ? <AudioIcon /> : <VideoIcon />}
-          <span>{label}</span>
-          {hd && (
-            <span className="ml-0.5 px-1 py-0.5 text-[9px] leading-none font-bold bg-red-600 text-white rounded-sm">
-              HD
-            </span>
-          )}
-          {isActive && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full">
-              <Spinner size="sm" />
-            </div>
-          )}
-        </button>
-      );
-    })}
-  </div>
-));
+  return (
+    <div className="flex flex-wrap items-center gap-2.5">
+      {(formats || []).map(({ value, label, type, hd }) => {
+        const isActive = isDownloading && activeFormat === value;
+        return (
+          <button
+            key={value}
+            onClick={() => onDownload(value)}
+            disabled={isDownloading}
+            aria-label={`Download ${label}`}
+            className={`
+              relative flex items-center justify-center gap-1.5 px-4 py-2 rounded-full border
+              transition-all duration-200 text-[13px] font-semibold tracking-wide select-none
+              ${isActive
+                ? 'bg-gray-700 border-gray-600 text-white cursor-wait'
+                : 'bg-gray-900 hover:bg-gray-700 border-gray-700 text-gray-300 hover:text-white hover:scale-105 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100'
+              }
+            `}
+          >
+            {type === 'audio' ? <AudioIcon /> : <VideoIcon />}
+            <span>{label}</span>
+            {hd && (
+              <span className="ml-0.5 px-1 py-0.5 text-[9px] leading-none font-bold bg-red-600 text-white rounded-sm">
+                HD
+              </span>
+            )}
+            {isActive && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full">
+                <Spinner size="sm" />
+              </div>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+});
 
 DownloadButtons.displayName = 'DownloadButtons';
 export default DownloadButtons;

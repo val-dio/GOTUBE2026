@@ -1,7 +1,7 @@
-import { useState, useCallback, memo } from 'react';
+import { useState, useCallback, useEffect, memo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useVideo } from '../context/VideoContext';
-import { downloadVideoBlob } from '../services/api';
+import { downloadVideoBlob, getVideoFormats } from '../services/api';
 import VideoEmbed from '../components/player/VideoEmbed';
 import DownloadButtons from '../components/player/DownloadButtons';
 import DownloadBar from '../components/player/DownloadBar';
@@ -12,14 +12,32 @@ const Player = memo(() => {
   const navigate = useNavigate();
   const { currentVideo, videos, openVideo } = useVideo();
 
-  const [activeFormat, setActiveFormat] = useState(null);
-  const [dlState,      setDlState]      = useState('idle');
-  const [progress,     setProgress]     = useState(0);
-  const [dlError,      setDlError]      = useState('');
-
-  /* Use currentVideo from context, or fall back to a minimal object from URL param */
   const video   = currentVideo || (paramId ? { id: paramId, title: 'GoTube Video' } : null);
   const videoId = video?.id;
+
+  const [activeFormat,   setActiveFormat]   = useState(null);
+  const [dlState,        setDlState]        = useState('idle');
+  const [progress,       setProgress]       = useState(0);
+  const [dlError,        setDlError]        = useState('');
+  const [formats,        setFormats]        = useState([]);
+  const [formatsLoading, setFormatsLoading] = useState(false);
+
+  /* Fetch available formats when video changes */
+  useEffect(() => {
+    if (!videoId) return;
+    setFormats([]);
+    setFormatsLoading(true);
+    getVideoFormats(videoId)
+      .then(f => setFormats(f))
+      .catch(() => setFormats([
+        { value: 'mp3',  label: 'MP3',   type: 'audio', hd: false },
+        { value: '1080', label: '1080p', type: 'video', hd: true  },
+        { value: '720',  label: '720p',  type: 'video', hd: true  },
+        { value: '480',  label: '480p',  type: 'video', hd: false },
+        { value: '360',  label: '360p',  type: 'video', hd: false },
+      ]))
+      .finally(() => setFormatsLoading(false));
+  }, [videoId]);
 
   if (!video || !videoId) {
     return (
@@ -63,7 +81,8 @@ const Player = memo(() => {
 
       /* Trigger browser file save */
       const safeTitle = (video.title || videoId).replace(/[^\w\s-]/gi, '').trim().replace(/\s+/g, '_').slice(0, 80);
-      const label     = format === 'mp3' ? 'Audio' : format === '1080' ? '1080p_HD' : format === '720' ? '720p_HD' : `${format}p`;
+      const h         = parseInt(format, 10);
+      const label     = format === 'mp3' ? 'Audio' : h >= 2160 ? '4K' : h >= 1440 ? '2K' : h >= 1080 ? '1080p_HD' : h >= 720 ? '720p_HD' : `${format}p`;
       const ext       = format === 'mp3' ? 'mp3' : 'mp4';
       const filename  = `${safeTitle}_${label}.${ext}`;
       const url       = URL.createObjectURL(blob);
@@ -116,6 +135,8 @@ const Player = memo(() => {
                 Download Video
               </h2>
               <DownloadButtons
+                formats={formats}
+                formatsLoading={formatsLoading}
                 activeFormat={activeFormat}
                 isDownloading={isDownloading}
                 onDownload={handleDownload}

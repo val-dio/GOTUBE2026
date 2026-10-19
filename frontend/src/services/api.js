@@ -41,6 +41,10 @@ export const getTrending = () =>
 export const sendContactMessage = (name, email, message) =>
   axios.post('/api/contact', { name, email, message }).then(r => r.data);
 
+/* ─── Get dynamic formats for a video ─── */
+export const getVideoFormats = (id) =>
+  axios.get(`${RAILWAY_BASE}/api/formats`, { params: { id }, timeout: 20_000 }).then(r => r.data.formats || []);
+
 /* ─── Download URL builder (Railway/Render download service) ─── */
 export const getDownloadUrl = (id, format, title) => {
   const params = new URLSearchParams({ id, format });
