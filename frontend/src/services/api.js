@@ -41,22 +41,25 @@ export const getTrending = () =>
 export const sendContactMessage = (name, email, message) =>
   axios.post('/api/contact', { name, email, message }).then(r => r.data);
 
-/* ─── Download URL builder (Railway) ─── */
-export const getDownloadUrl = (id, format) =>
-  `${RAILWAY_BASE}/api/download?id=${encodeURIComponent(id)}&format=${encodeURIComponent(format)}`;
+/* ─── Download URL builder (Railway/Render download service) ─── */
+export const getDownloadUrl = (id, format, title) => {
+  const params = new URLSearchParams({ id, format });
+  if (title) params.set('title', title);
+  return `${RAILWAY_BASE}/api/download?${params.toString()}`;
+};
 
 /**
  * Download video as blob with real XHR progress tracking.
  * onProgress(percent: number) is called as bytes arrive.
  * Returns a Promise<Blob>.
  */
-export const downloadVideoBlob = (id, format, onProgress) =>
+export const downloadVideoBlob = (id, format, title, onProgress) =>
   new Promise((resolve, reject) => {
-    const url = getDownloadUrl(id, format);
+    const url = getDownloadUrl(id, format, title);
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url);
     xhr.responseType = 'blob';
-    xhr.timeout = 90_000;
+    xhr.timeout = 180_000;
 
     xhr.onprogress = (event) => {
       if (event.lengthComputable && onProgress) {
@@ -73,7 +76,7 @@ export const downloadVideoBlob = (id, format, onProgress) =>
     };
 
     xhr.onerror   = () => reject(new Error('Network error — connection failed'));
-    xhr.ontimeout = () => reject(new Error('Request timed out after 90 seconds'));
+    xhr.ontimeout = () => reject(new Error('Request timed out'));
     xhr.send();
   });
 

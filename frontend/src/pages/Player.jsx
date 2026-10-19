@@ -51,7 +51,7 @@ const Player = memo(() => {
     setProgress(0);
 
     try {
-      const blob = await downloadVideoBlob(videoId, format, (pct) => setProgress(pct));
+      const blob = await downloadVideoBlob(videoId, format, video.title, (pct) => setProgress(pct));
 
       setDlState('processing');
       setProgress(85);
@@ -62,9 +62,10 @@ const Player = memo(() => {
       await new Promise(r => setTimeout(r, 400));
 
       /* Trigger browser file save */
+      const safeTitle = (video.title || videoId).replace(/[^\w\s-]/gi, '').trim().replace(/\s+/g, '_').slice(0, 80);
+      const label     = format === 'mp3' ? 'Audio' : format === '1080' ? '1080p_HD' : format === '720' ? '720p_HD' : `${format}p`;
       const ext       = format === 'mp3' ? 'mp3' : 'mp4';
-      const safeTitle = (video.title || videoId).replace(/[^\w\s-]/gi, '').trim().replace(/\s+/g, '_');
-      const filename  = `${safeTitle}.${ext}`;
+      const filename  = `${safeTitle}_${label}.${ext}`;
       const url       = URL.createObjectURL(blob);
       const a         = document.createElement('a');
       a.href          = url;
