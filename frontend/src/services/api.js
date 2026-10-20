@@ -1,20 +1,14 @@
 import axios from 'axios';
 
-const RENDER_BASE  = (import.meta.env.VITE_RENDER_URL  || '').trim();
-const RAILWAY_BASE = (import.meta.env.VITE_RAILWAY_URL || '').trim();
+// Strip trailing slash to prevent //api/download double-slash bug
+const RENDER_BASE  = (import.meta.env.VITE_RENDER_URL  || '').trim().replace(/\/$/, '');
+const RAILWAY_BASE = (import.meta.env.VITE_RAILWAY_URL || '').trim().replace(/\/$/, '');
 
-/* ─── Axios instances with timeout ─── */
-const renderClient = axios.create({
-  baseURL: RENDER_BASE,
-  timeout: 15_000,
-});
+/* ─── Axios instances ─── */
+const renderClient = axios.create({ baseURL: RENDER_BASE, timeout: 15_000 });
+const railwayClient = axios.create({ baseURL: RAILWAY_BASE, timeout: 90_000 });
 
-const railwayClient = axios.create({
-  baseURL: RAILWAY_BASE,
-  timeout: 90_000, // downloads can take longer
-});
-
-/* Simple retry: 1 extra attempt on network errors */
+/* Simple retry on network errors */
 const withRetry = (client) => {
   client.interceptors.response.use(null, async (error) => {
     const config = error.config;
@@ -26,14 +20,14 @@ const withRetry = (client) => {
     return Promise.reject(error);
   });
 };
-
 withRetry(renderClient);
+withRetry(railwayClient);
 
-/* ─── Search Videos (Render) ─── */
+/* ─── Search (Render) ─── */
 export const searchVideos = (q) =>
   renderClient.get('/api/search', { params: { q } }).then(r => r.data.items || []);
 
-/* ─── Trending Feed (Render) ─── */
+/* ─── Trending (Render) ─── */
 export const getTrending = () =>
   renderClient.get('/api/trending').then(r => r.data.items || []);
 
@@ -41,33 +35,25 @@ export const getTrending = () =>
 export const sendContactMessage = (name, email, message) =>
   axios.post('/api/contact', { name, email, message }).then(r => r.data);
 
-/* ─── Get dynamic formats for a video ─── */
+/* ─── Dynamic formats (Railway) ─── */
 export const getVideoFormats = (id) =>
-  axios.get(`${RAILWAY_BASE}/api/formats`, { params: { id }, timeout: 20_000 }).then(r => r.data.formats || []);
+  railwayClient.get('/api/formats', { params: { id }, timeout: 60_000 }).then(r => r.data.formats || []);
 
-/* ─── Download URL builder (Railway/Render download service) ─── */
-export const getDownloadUrl = (id, format, title) => {
-  const params = new URLSearchParams({ id, format });
-  if (title) params.set('title', title);
-  return `${RAILWAY_BASE}/api/download?${params.toString()}`;
-};
-
-/**
- * Download video as blob with real XHR progress tracking.
- * onProgress(percent: number) is called as bytes arrive.
- * Returns a Promise<Blob>.
- */
+/* ─── Download blob with XHR progress (Railway) ─── */
 export const downloadVideoBlob = (id, format, title, onProgress) =>
   new Promise((resolve, reject) => {
-    const url = getDownloadUrl(id, format, title);
+    const params = new URLSearchParams({ id, format });
+    if (title) params.set('title', title);
+    const url = `${RAILWAY_BASE}/api/download?${params.toString()}`;
+
     const xhr = new XMLHttpRequest();
     xhr.open('GET', url);
     xhr.responseType = 'blob';
-    xhr.timeout = 180_000;
+    xhr.timeout = 300_000; // 5 min for large files
 
-    xhr.onprogress = (event) => {
-      if (event.lengthComputable && onProgress) {
-        onProgress(Math.round((event.loaded / event.total) * 100));
+    xhr.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
       }
     };
 
